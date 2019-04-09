@@ -1,8 +1,6 @@
-# fastdfs-tengine-docker
-fastdfs tengine in docker https://github.com/fongzii/fastdfs-tengine-docker/
-
+fastdfs-tengine-docker
 =============
-With some nginx modules in docker
+fastdfs tengine in docker https://github.com/fongzii/fastdfs-tengine-docker/
 
 Install
 -------------
