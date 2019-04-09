@@ -1,0 +1,41 @@
+version: '2'
+services:
+  tracker:
+    image: fastdfs
+    container_name: tracker
+    ports:
+      - "22122:22122"
+    environment: 
+      - FASTDFS_MODE=tracker
+    volumes:
+      - /docker/fastdfs/tracker:/var/fdfs
+      - /docker/fastdfs/conf:/etc/fdfs
+      - /etc/localtime:/etc/localtime:ro
+      - /docker/hosts:/etc/hosts:ro
+    networks: 
+      default:
+        ipv4_address: 172.16.0.62
+    hostname: mynet.tracker
+  storage1:
+    image: fastdfs
+    container_name: storage1
+    ports:
+      - "80:80"
+      - "22123:22123"
+    environment:
+      - FASTDFS_MODE=storage
+      - TRACKER_SERVER=misp.tracker:22122
+    volumes:
+      - /docker//fastdfs/storage:/var/fdfs
+      - /docker/fastdfs/conf:/etc/fdfs
+      - /docker/nginx/conf:/opt/tengine/conf
+      - /etc/localtime:/etc/localtime:ro
+      - /docker/hosts:/etc/hosts:ro
+    networks:
+      default:
+        ipv4_address: 172.16.0.64
+    hostname: mynet.storage1
+networks: 
+   default: 
+     external:
+       name: mynet
