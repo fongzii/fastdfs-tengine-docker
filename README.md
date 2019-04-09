@@ -2,92 +2,91 @@ fastdfs-tengine-docker
 =============
 fastdfs tengine in docker https://github.com/fongzii/fastdfs-tengine-docker/
 
-Install
+Create image
 -------------
-* [libfastcommon-1.0.35](https://github.com/happyfish100/libfastcommon)
-* [fastdfs-master (20170712)](https://github.com/happyfish100/fastdfs)
-* [nginx-1.13.3](http://nginx.org/)
-* [fastdfs-nginx-module-master (20170710)](https://github.com/happyfish100/fastdfs-nginx-module)
-* [echo-nginx-module-master (20170710)](https://github.com/openresty/echo-nginx-module)
-* [nginx-eval-module-master (20170712)](https://github.com/vkholodkov/nginx-eval-module)
-* [ngx_http_redis-0.3.8](https://www.nginx.com/resources/wiki/modules/redis)
+* Dockerfile
+``````
+## Go to the directory of Dockerfile 
+## Notice there's a point at the line end.
+## you can use your image name to replace name fastdfs-tengine
+docker build -t fastdfs-tengine .
+``````
+Create container
+-------------
+* Create docker network
+``````
+## Network name 'mynet'
+docker network create --driver bridge --subnet 172.16.0.0/24 --gateway 172.16.0.1 mynet
+``````
+
+* Create hosts file 
+``````
+## you can also change /etc/hosts 
+172.16.0.62     mynet.tracker
+127.16.0.64     mynet.storage1
+``````
+
+* Check or change docker-compose.yml 
+``````
+services:
+  tracker:
+    image: fastdfs-tengine #docker image tag name
+    container_name: tracker
+    ports:
+      - "22122:22122"
+    environment: 
+      - FASTDFS_MODE=tracker # tracker or storage
+    volumes:
+      - /docker/fastdfs/tracker:/var/fdfs  
+      - /docker/fastdfs/conf:/etc/fdfs
+      - /etc/localtime:/etc/localtime:ro
+      - /docker/hosts:/etc/hosts:ro  #if you choose use '/etc/hosts',then change this '/docker/hosts' to '/etc/hosts'
+    networks: 
+      default:
+        ipv4_address: 172.16.0.62
+    hostname: mynet.tracker
+networks: 
+   default: 
+     external:
+       name: mynet #use created network 'mynet'
+``````
+
+* Build docker-compose.yml
+``````
+## go to the directory of docker-compose.yml
+## auto create container 'tracker','storage1' and start them.
+docker-compose up -d 
+``````
 
 Conf
 -------------
 * storage.conf
 ``````
 ## can not use 127.0.0.1
-tracker_server=host-ip:22122
+tracker_server=mynet.tracker:22122
 ``````
 * mod_fastdfs.conf
 ``````
-tracker_server=127.0.0.1:22122
+tracker_server=mynet.tracke:22122
 ``````
 * nginx.conf
 ``````
-## if need check token from redis
-upstream redisbackend {
-  server    redis-server-ip:port;
-  keepalive 1024;
+## update ngx_fastdfs_module 
+location /group1 {
+      root /var/fdfs/data;
+      ngx_fastdfs_module;
 }
 ``````
 * other conf files if you needed
 
-Build
+Test
 -------------
 ``````
-## you can use your image name to replace name 'fastdfs-nginx'
-docker build -t fastdfs-nginx .
+## Upload test
+/usr/bin/fdfs_test     /etc/fdfs/client.conf  upload  anti-steal.jpg
 ``````
-
-Network
--------------
+* You will see url like as follows,copy the url and change the IP to you server IP,You'll be able to access the picture.
 ``````
-## you can create your network for this server, like:
-docker network create --driver bridge --subnet 192.168.1.0/20 network0
-``````
-
-Run
--------------
-``````
-## should use host network (test pass)
-docker run -itd \
-  --name fastdfs-nginx \
-  --network=host \
-  -v /etc/localtime:/etc/localtime:ro \
-  -v /var/log/fdfs/:/data/fdfs/logs/ \
-  -v /data/fdfs/data/:/data/fdfs/data/ \
-  -v /var/log/nginx/:/var/log/nginx/ \
-  fastdfs-nginx \
-  sh -c "/usr/bin/fdfs_trackerd /etc/fdfs/tracker.conf restart && /usr/bin/fdfs_storaged /etc/fdfs/storage.conf restart && /usr/sbin/nginx -g 'daemon off;'"
-
-## if you want to use your network and use ip 192.168.16.6
-## in this case, you should update some conf to make fdfs work
-## like set tracker_server in storage.conf to 192.168.16.6
-## the app which use fdfs-client-java to upload file should in the same network (not test yet)
-docker run -itd \
-  --name fastdfs-nginx \
-  --network=network0 --ip=192.168.16.6 \
-  -p 22122:22122 \
-  -p 23000:23000 \
-  -p 24001:24001 \
-  -p 24002:24002 \
-  -p 11411:11411 \
-  -v /etc/localtime:/etc/localtime:ro \
-  -v /var/log/fdfs/:/data/fdfs/logs/ \
-  -v /data/fdfs/data/:/data/fdfs/data/ \
-  -v /var/log/nginx/:/var/log/nginx/ \
-  fastdfs-nginx \
-  sh -c "/usr/bin/fdfs_trackerd /etc/fdfs/tracker.conf restart && /usr/bin/fdfs_storaged /etc/fdfs/storage.conf restart && /usr/sbin/nginx -g 'daemon off;'"
-``````
-
-API
--------------
-``````
-## fetch file from server, if you need check token
-http://ip:24001/group1/M00/00/00/xxxxxx?tk=zzz&&typ=yyy
-
-## fetch file from server directly
-http://ip:24002/group1/M00/00/00/xxxxxx.yyy
+example file url: http://172.16.0.64/group1/M00/00/00/rBAAQFysTvaAMnXjAAVIDEP9rus106.jpg
 ``````
 
